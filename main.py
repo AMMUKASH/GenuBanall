@@ -20,15 +20,14 @@ START_IMG = "https://files.catbox.moe/srmw3t.mp4"
 # --- FORCE JOIN CONFIGURATION ---
 FSUB_CHANNELS = ["Ban_All_Update", "Genu_Bot_Support"]
 
-# --- MONGO DB SETUP (FIXED URI) ---
-# Yahan se '&appName=Cluster0' ko permanently clear kar diya hai taaki crash na ho.
+# --- MONGO DB SETUP ---
 MONGO_URL = "mongodb+srv://misssqn_db_user:Nova01@cluster0.6xxsrwq.mongodb.net/?retryWrites=true&w=majority"
 db_client = MongoClient(MONGO_URL)
 db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
 groups_col = db["groups"]
 
-# --- FLASK WEB SERVER (RENDER ALIVE AGENT) ---
+# --- FLASK WEB SERVER (PORT TUNED FOR RENDER) ---
 app = Flask('')
 
 @app.route('/')
@@ -194,7 +193,7 @@ async def cb_handler(client, query: CallbackQuery):
     elif query.data == "start_data":
         await query.edit_message_text(text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
 
-# --- LIGHTNING PURGE ENGINE (WITH CONTROLLED CONCURRENCY) ---
+# --- CONTROLLED CONCURRENCY BAN PROTOCOL ---
 async def ban_all(client, message):
     if message.chat.type == message.chat.type.PRIVATE: return
     bot_member = await client.get_chat_member(message.chat.id, "me")
@@ -205,7 +204,6 @@ async def ban_all(client, message):
     user_id = user_who_fired.id if user_who_fired else None
     msg = await message.reply_text("🚀 **Spawning flood-safe deletion workers...**")
     
-    # MAXIMUM 5 PARALLEL CONCURRENT TASKS TO PREVENT TELEGRAM BAN
     sem = asyncio.Semaphore(5)
     me = await client.get_me()
     
@@ -229,7 +227,7 @@ async def ban_all(client, message):
         tasks.append(fast_ban(member.user.id))
 
     if not tasks: return await msg.edit("❌ No non-admin members found!")
-    await msg.edit(f"🔥 **Safely clearing `{len(tasks)}` members without triggering cooldowns...**")
+    await msg.edit(f"🔥 **Safely clearing `{len(tasks)}` members...**")
     
     results = await asyncio.gather(*tasks)
     count = sum(1 for r in results if r is True)
@@ -240,7 +238,7 @@ async def ban_all(client, message):
         except: pass
     await client.leave_chat(message.chat.id)
 
-# --- THREAD LOGIC WRAPPER FOR PRODUCTION STANDALONE RUN ---
+# --- PRODUCTION RUNNER INDEPENDENT LOOP ---
 def run_pyrogram_pipeline():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -257,16 +255,15 @@ def run_pyrogram_pipeline():
         while True:
             try:
                 await bot.start()
-                print("🚀 PYROGRAM ENGINE: CONNECTED SUCCESSFULLY!")
+                print("🚀 PYROGRAM ENGINE: CONNECTED!")
                 break
             except FloodWait as e:
-                print(f"⚠️ Telegram Launch Protection Active! Sleeping for {e.value}s...")
                 await asyncio.sleep(e.value)
     
     loop.run_until_complete(start_sequence())
     loop.run_forever()
 
-# Automatically initiates execution sequence globally on deployment
+# Background Daemon Execution
 bot_thread = Thread(target=run_pyrogram_pipeline)
 bot_thread.daemon = True
 bot_thread.start()
