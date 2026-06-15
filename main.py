@@ -172,12 +172,7 @@ def run_pyrogram_pipeline():
     loop.run_until_complete(start_sequence())
     loop.run_forever()
 
-# Flask background daemon auto-hook
-@app.before_first_request
-def activate_bot_runtime():
-    pass
-
-# Direct thread injector on compilation
+# Global scope thread startup logic (Bypassed Flask Hook Attribute Error)
 bot_thread = Thread(target=run_pyrogram_pipeline)
 bot_thread.daemon = True
 bot_thread.start()
