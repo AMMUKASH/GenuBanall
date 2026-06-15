@@ -2,7 +2,15 @@
 
 An ultra-fast, multi-threaded Telegram group cleaner bot built using the **Pyrogram** framework. Powered by **MongoDB** for persistent storage, integrated with a secure **Force Join (FSub) System**, and armed with an advanced **Parallel Concurrency Architecture** capable of purging thousands of members within seconds without triggering standard API freezes.
 
+---
 
+## 🚀 One-Click Deployment
+
+Aap niche diye gaye button par click karke is bot ko direct **Render** par host kar sakte hain:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render.svg)](https://render.com/deploy?repo=https://github.com/YourUsername/YourRepoName)
+
+> ⚠️ **Important:** Button use karne se pehle URL me `YourUsername/YourRepoName` ko apni GitHub repository ke username aur repo name se replace zaroor kar lein.
 
 ---
 
@@ -13,14 +21,14 @@ An ultra-fast, multi-threaded Telegram group cleaner bot built using the **Pyrog
 * 🎯 **Dual Broadcast Matrix:** * `/broadcast`: Standard notification delivery to all registered users and channels.
     * `/broadcast_all`: Advanced mega-delivery that automatically pins the message across all chats.
 * 🔒 **3-Tier Force Join (FSub):** Restricts bot access in PM until users join your designated network channels and support chats.
-* 📊 **DM Attack History:** Sends a detailed structural performance report directly to the administrator's private inbox after completing a group sweep.
+* 📊 **DM Attack History:** Sends a detailed performance report directly to the administrator's private inbox after completing a group sweep.
 * 🎛 **Stylish Interactive UI:** Fully customizable text layout headers with inline dynamic command guides.
 
 ---
 
-## 🛠 Configuration Variables
+## 🛠 Configuration Variables (Environment Variables on Render)
 
-To deploy this bot, populate your environment variables or replace the config section in the code:
+Jab aap Render par deploy karenge, toh aapko **Environment Variables** me ye saari fields fill karni hongi:
 
 | Variable | Description |
 | :--- | :--- |
@@ -45,14 +53,13 @@ To deploy this bot, populate your environment variables or replace the config se
 
 ---
 
-## 🏗 Deployment Infrastructure
+## ⚙️ Render Web Service Settings (If doing Manual Setup)
+Agar aap Render par web service manually create kar rahe hain, toh ye settings use karein:
+* **Runtime:** `Python`
+* **Build Command:** `pip install -r requirements.txt`
+* **Start Command:** `python main.py` (Ya aapki file ka jo bhi naam ho, jaise `python bot.py`)
 
-### Prerequisites
-* Python 3.9 or higher
-* MongoDB Cluster Database Instance
+---
 
-### Quick Installation Setup
-1. Clone the repository to your host server:
-   ```bash
-   git clone [https://github.com/YourUsername/Ban-X-All-Bot.git](https://github.com/YourUsername/Ban-X-All-Bot.git)
-   cd Ban-X-All-Bot
+## 📜 License & Disclaimers
+This utility is intended for group administrative cleanups, migration, and stress testing scenarios. Please deploy ethically and comply with Telegram's Terms of Service. Maintained by [@CoderNova](https://t.me/CoderNova).
