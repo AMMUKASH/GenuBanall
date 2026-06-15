@@ -298,7 +298,7 @@ async def ban_all(client, message):
     await asyncio.sleep(1)
     await client.leave_chat(message.chat.id)
 
-# --- MAIN ASYNC CORE ENGINE RUNNER ---
+# --- MAIN ASYNC CORE ENGINE RUNNER WITH FLOODWAIT SAFETY ---
 async def main():
     keep_alive()  # Activates local web service for Render uptime
     print("Initializing Pyrogram Core Async Engine...")
@@ -313,8 +313,16 @@ async def main():
     bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
     bot.add_handler(Client.on_callback_query()(cb_handler))
     
-    await bot.start()
-    print("Bot is fully live, verified, and stable on Render! 🚀")
+    # Auto loop to retry connection if Telegram triggers FloodWait on launch
+    while True:
+        try:
+            await bot.start()
+            print("Bot is fully live, verified, and stable on Render! 🚀")
+            break
+        except FloodWait as e:
+            print(f"⚠️ Telegram Launch Protection Active! Sleeping for {e.value} seconds...")
+            await asyncio.sleep(e.value)
+            
     while True:
         await asyncio.sleep(3600)
 
