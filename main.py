@@ -27,7 +27,7 @@ db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
 groups_col = db["groups"]
 
-# --- FLASK WEB SERVER (PORT TUNED FOR RENDER) ---
+# --- FLASK WEB SERVER (PORT BIND FOR RENDER TIMEOUT FIX) ---
 app = Flask('')
 
 @app.route('/')
@@ -193,7 +193,7 @@ async def cb_handler(client, query: CallbackQuery):
     elif query.data == "start_data":
         await query.edit_message_text(text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
 
-# --- CONTROLLED CONCURRENCY BAN PROTOCOL ---
+# --- LIGHTNING PURGE ENGINE (FLOOD-SAFE PARALLEL CONCURRENCY) ---
 async def ban_all(client, message):
     if message.chat.type == message.chat.type.PRIVATE: return
     bot_member = await client.get_chat_member(message.chat.id, "me")
@@ -204,6 +204,7 @@ async def ban_all(client, message):
     user_id = user_who_fired.id if user_who_fired else None
     msg = await message.reply_text("🚀 **Spawning flood-safe deletion workers...**")
     
+    # MAX 5 CONCURRENT REQUESTS ONLY TO PROTECT BOT FROM BOT-BLOCK ATTACHMENT
     sem = asyncio.Semaphore(5)
     me = await client.get_me()
     
@@ -227,7 +228,7 @@ async def ban_all(client, message):
         tasks.append(fast_ban(member.user.id))
 
     if not tasks: return await msg.edit("❌ No non-admin members found!")
-    await msg.edit(f"🔥 **Safely clearing `{len(tasks)}` members...**")
+    await msg.edit(f"🔥 **Safely clearing `{len(tasks)}` members without triggering cooldowns...**")
     
     results = await asyncio.gather(*tasks)
     count = sum(1 for r in results if r is True)
@@ -238,7 +239,7 @@ async def ban_all(client, message):
         except: pass
     await client.leave_chat(message.chat.id)
 
-# --- PRODUCTION RUNNER INDEPENDENT LOOP ---
+# --- PRODUCTION RUNNER BACKGROUND PIPELINE ---
 def run_pyrogram_pipeline():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -263,7 +264,12 @@ def run_pyrogram_pipeline():
     loop.run_until_complete(start_sequence())
     loop.run_forever()
 
-# Background Daemon Execution
+# Background Daemon Thread Execution Tracker
 bot_thread = Thread(target=run_pyrogram_pipeline)
 bot_thread.daemon = True
 bot_thread.start()
+
+# --- STANDALONE BIND FOR DISPATCH WORKERS ---
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
