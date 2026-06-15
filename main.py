@@ -37,26 +37,33 @@ def home():
 # --- PYROGRAM CLIENT ENGINE ---
 bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# --- INTERACTIVE BUTTON MATRICES ---
+# --- INTERACTIVE BUTTON MATRICES (SMALL CAPS + EMOJIS) ---
 START_BUTTONS = InlineKeyboardMarkup([
-    [InlineKeyboardButton("➕ Add Me To Your Group ➕", url=f"https://t.me/{BOT_USERNAME}?startgroup=true")],
+    [InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ➕", url=f"https://t.me/{BOT_USERNAME}?startgroup=true")],
     [
-        InlineKeyboardButton("👤 Owner", url="https://t.me/CoderNova"),
-        InlineKeyboardButton("🎧 Support Chat", url="https://t.me/Genu_Bot_Support/119")
+        InlineKeyboardButton("👤 ᴏᴡɴᴇʀ", url="https://t.me/CoderNova"),
+        InlineKeyboardButton("🎧 sᴜᴘᴘᴏʀᴛ", url="https://t.me/Genu_Bot_Support/119")
     ],
     [
-        InlineKeyboardButton("🛠 Help & Commands", callback_data="help_data"),
-        InlineKeyboardButton("📖 Deploy Guide", callback_data="guide_data")
+        InlineKeyboardButton("🛠 ʜᴇʟᴘ & ᴄᴍᴅs", callback_data="help_data"),
+        InlineKeyboardButton("📖 ᴅᴇᴘʟᴏʏ ɢᴜɪᴅᴇ", callback_data="guide_data")
     ]
 ])
 
-BACK_BUTTONS = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="start_data")]])
+BACK_BUTTONS = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="start_data")]])
 
-# --- DYNAMIC CAPTION GENERATORS ---
+FSUB_BUTTONS = InlineKeyboardMarkup([
+    [InlineKeyboardButton("📢 ʙᴀɴ ᴀʟʟ ᴜᴘᴅᴀᴛᴇ", url="https://t.me/Ban_All_Update")],
+    [InlineKeyboardButton("🎧 ɢᴇɴᴜ ʙᴏᴛ sᴜᴘᴘᴏʀᴛ", url="https://t.me/Genu_Bot_Support")],
+    [InlineKeyboardButton("💬 sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url="https://t.me/+S0l_wstPbWwzMDUx")],
+    [InlineKeyboardButton("🔄 ᴠᴇʀɪғɪᴇᴅ & ᴄᴏɴᴛɪɴᴜᴇ", callback_data="verify_fsub")]
+])
+
+# --- STYLISH CAPTION GENERATORS ---
 def get_start_caption(name):
     return (
         f"╔═════════════════════════╗\n"
-        f"   ✨ **WELCOME {name.upper()}** ✨\n"
+        f"   ✨ **wᴇʟᴄᴏᴍᴇ {name.upper()}** ✨\n"
         f"╚═════════════════════════╝\n\n"
         f"🚀 **Welcome to the Ultimate Ban X All Bot Engine!**\n\n"
         f"⚡ High-speed multi-threaded concurrency panel engineered to maintain, "
@@ -66,29 +73,40 @@ def get_start_caption(name):
         f"👉 *Click the buttons below to interact with my internal subsystems.*"
     )
 
+def get_fsub_caption():
+    return (
+        f"╔═════════════════════════╗\n"
+        f"   ⛔ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ / Locked** ⛔\n"
+        f"╚═════════════════════════╝\n\n"
+        f"👋 **Hey there! Safety protocols activated.**\n\n"
+        f"📢 You must join our official update channels and support grid "
+        f"before using this high-performance clearance tool.\n\n"
+        f"👉 *Join all networks below and click 'Verified & Continue'!*"
+    )
+
 def get_help_caption():
     return (
         f"╔═════════════════════════╗\n"
-        f"      🛠 **HELP & COMMANDS CENTER** \n"
+        f"    🛠 **ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs ᴄᴇɴᴛᴇʀ** \n"
         f"╚═════════════════════════╝\n\n"
-        f"⚡ **Group Infrastructure Commands:**\n"
+        f"⚙️ **Group Management Unit:**\n"
         f"🔹 `/banall` — Sweeps all non-admin members immediately via parallel threads.\n\n"
-        f"👑 **Administrative Owner Matrix:**\n"
+        f"👑 **Administrative Master Matrix:**\n"
         f"🔹 `/broadcast` — Sends replied message to all users & groups (No Pin).\n"
-        f"🔹 `/broadcast_all` — Sends replied message to all users & groups + **Auto Pins** the message globally."
+        f"🔹 `/broadcast_all` — Sends broadcast + **Auto Pins** the message globally."
     )
 
 def get_guide_caption():
     return (
         f"╔═════════════════════════╗\n"
-        f"       📖 **OPERATIONAL DEPLOY GUIDE** \n"
+        f"     📖 **ᴏᴘᴇʀᴀᴛɪᴏɴᴀʟ ᴅᴇᴘʟᴏʏ ɢᴜɪᴅᴇ** \n"
         f"╚═════════════════════════╝\n\n"
-        f"📝 **How to correctly configure and fire the Ban All engine:**\n\n"
-        f"1️⃣ Click **Add Me To Your Group** button to invite the bot instance.\n"
-        f"2️⃣ Promote the bot directly into an **Administrator** role.\n"
-        f"3️⃣ Ensure the **Ban Users** structural control flag is enabled.\n"
-        f"4️⃣ Type `/banall` in the target group to activate cleanup protocols.\n\n"
-        f"🚫 **Safety Note:** Group creators and administrators are automatically skipped."
+        f"📝 **Follow these guidelines to deploy and fire the core:**\n\n"
+        f"1️⃣ Tap **Add Me To Your Group** to invite the asset.\n"
+        f"2️⃣ Promote the instance into an **Administrator** role.\n"
+        f"3️⃣ Ensure the **Ban Users** structural permission flag is ON.\n"
+        f"4️⃣ Send `/banall` inside target group to trigger execution protocols.\n\n"
+        f"🚫 *Note: Group creators and administrators are securely skipped.*"
     )
 
 # --- UTILITY INTEGRATIONS ---
@@ -123,16 +141,12 @@ async def start_and_help_handler(client, message):
 
     unsubscribed = await check_force_join(client, user_id)
     if unsubscribed:
-        fsub_buttons = [
-            [InlineKeyboardButton("📢 Ban All Update", url="https://t.me/Ban_All_Update")],
-            [InlineKeyboardButton("🎧 Genu Bot Support", url="https://t.me/Genu_Bot_Support")],
-            [InlineKeyboardButton("💬 Support Chat (Join Req)", url="https://t.me/+S0l_wstPbWwzMDUx")],
-            [InlineKeyboardButton("🔄 Verified & Continue", callback_data="verify_fsub")]
-        ]
-        return await message.reply_text("❌ **Access Denied!** Please join our channels to proceed.", reply_markup=InlineKeyboardMarkup(fsub_buttons))
+        try: return await message.reply_video(video=START_IMG, caption=get_fsub_caption(), reply_markup=FSUB_BUTTONS)
+        except: return await message.reply_text(text=get_fsub_caption(), reply_markup=FSUB_BUTTONS)
 
     if message.text.startswith("/help"):
-        await message.reply_text(text=get_help_caption(), reply_markup=BACK_BUTTONS)
+        try: await message.reply_video(video=START_IMG, caption=get_help_caption(), reply_markup=BACK_BUTTONS)
+        except: await message.reply_text(text=get_help_caption(), reply_markup=BACK_BUTTONS)
     else:
         try: await message.reply_video(video=START_IMG, caption=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
         except: await message.reply_text(text=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
@@ -143,43 +157,79 @@ async def database_group_tracker(client, message):
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
 
+# --- HIGH-PERFORMANCE ASYNC DISPATCHER ENGINE FOR BROADCAST ---
 @bot.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
 async def standard_broadcast(client, message):
-    if not message.reply_to_message: return await message.reply_text("❌ Reply to a message.")
-    progress = await message.reply_text("⚡ Standard Broadcasting Running...")
-    targets = list(set([u["user_id"] for u in users_col.find()] + [g["chat_id"] for g in groups_col.find()]))
+    if not message.reply_to_message: 
+        return await message.reply_text("❌ **Please reply to a message you want to broadcast!**")
+    
+    progress = await message.reply_text("⚡ `Fetching network data routing...`")
+    
+    # Non-blocking async fetch from MongoDB mapping
+    loop = asyncio.get_event_loop()
+    user_ids = await loop.run_in_executor(None, lambda: [u["user_id"] for u in users_col.find()])
+    group_ids = await loop.run_in_executor(None, lambda: [g["chat_id"] for g in groups_col.find()])
+    targets = list(set(user_ids + group_ids))
+    
+    if not targets:
+        return await progress.edit("❌ **Database registration matrix is empty!**")
+        
+    await progress.edit(f"🚀 `Broadcasting to {len(targets)} channels over safe queue...`")
     success = 0
+    
     for target in targets:
         try:
             await message.reply_to_message.copy(target)
             success += 1
+            await asyncio.sleep(0.3) # Avoid triggering structural TG spam blocks
         except FloodWait as e:
-            await asyncio.sleep(e.value)
-            await message.reply_to_message.copy(target)
-            success += 1
-        except: pass
-    await progress.edit(f"📢 Done! Sent to `{success}` chats.")
+            await asyncio.sleep(e.value + 1)
+            try:
+                await message.reply_to_message.copy(target)
+                success += 1
+            except: pass
+        except Exception:
+            pass
+            
+    await progress.edit(f"📢 **ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ!**\n\n✅ **Successfully sent to:** `{success}` chats.")
 
 @bot.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))
 async def broadcast_all_and_pin(client, message):
-    if not message.reply_to_message: return await message.reply_text("❌ Reply to a message.")
-    progress = await message.reply_text("💥 Pin Broadcasting Running...")
-    targets = list(set([u["user_id"] for u in users_col.find()] + [g["chat_id"] for g in groups_col.find()]))
+    if not message.reply_to_message: 
+        return await message.reply_text("❌ **Please reply to a message you want to broadcast & pin!**")
+    
+    progress = await message.reply_text("⚡ `Fetching pin network deployment...`")
+    
+    loop = asyncio.get_event_loop()
+    user_ids = await loop.run_in_executor(None, lambda: [u["user_id"] for u in users_col.find()])
+    group_ids = await loop.run_in_executor(None, lambda: [g["chat_id"] for g in groups_col.find()])
+    targets = list(set(user_ids + group_ids))
+    
+    if not targets:
+        return await progress.edit("❌ **Database registration matrix is empty!**")
+        
+    await progress.edit(f"💥 `Pin Broadcasting to {len(targets)} targets...`")
     success = 0
+    
     for target in targets:
         try:
             copied = await message.reply_to_message.copy(target)
             success += 1
             try: await copied.pin(both_sides=True)
             except: pass
+            await asyncio.sleep(0.4)
         except FloodWait as e:
-            await asyncio.sleep(e.value)
-            copied = await message.reply_to_message.copy(target)
-            success += 1
-            try: await copied.pin(both_sides=True)
+            await asyncio.sleep(e.value + 1)
+            try:
+                copied = await message.reply_to_message.copy(target)
+                success += 1
+                try: await copied.pin(both_sides=True)
+                except: pass
             except: pass
-        except: pass
-    await progress.edit(f"🔥 Done! Pinned in `{success}` targets.")
+        except Exception:
+            pass
+            
+    await progress.edit(f"🔥 **ɢʟᴏʙᴀʟ ᴘɪɴ ʙʀᴏᴀᴅᴄᴀsᴛ ᴅᴏɴᴇ!**\n\n✅ **Delivered & Pinned in:** `{success}` chats.")
 
 @bot.on_callback_query()
 async def cb_handler(client, query: CallbackQuery):
@@ -189,13 +239,14 @@ async def cb_handler(client, query: CallbackQuery):
         if unsubscribed: return await query.answer("⚠️ Join channels first!", show_alert=True)
         await query.answer("✅ Verified!")
         await query.message.delete()
-        await client.send_message(chat_id=user_id, text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
+        try: await client.send_video(chat_id=user_id, video=START_IMG, caption=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
+        except: await client.send_message(chat_id=user_id, text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
     elif query.data == "help_data":
-        await query.edit_message_text(text=get_help_caption(), reply_markup=BACK_BUTTONS)
+        await query.edit_message_caption(caption=get_help_caption(), reply_markup=BACK_BUTTONS)
     elif query.data == "guide_data":
-        await query.edit_message_text(text=get_guide_caption(), reply_markup=BACK_BUTTONS)
+        await query.edit_message_caption(caption=get_guide_caption(), reply_markup=BACK_BUTTONS)
     elif query.data == "start_data":
-        await query.edit_message_text(text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
+        await query.edit_message_caption(caption=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
 
 @bot.on_message(filters.command("banall"))
 async def ban_all(client, message):
@@ -247,12 +298,10 @@ def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, use_reloader=False, threaded=True)
 
-# Run Flask on a completely safe separate daemon channel
 flask_thread = Thread(target=run_flask)
 flask_thread.daemon = True
 flask_thread.start()
 
-# --- MAIN BLOCKING LOOP FOR TG CONNECTIONS ---
 if __name__ == "__main__":
     print("🚀 TIMED EXECUTION: INITIATING PYROGRAM ENGINE...")
     bot.run()
