@@ -1,11 +1,11 @@
 import os
 import asyncio
-import sys
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import UserNotParticipant, FloodWait
 from flask import Flask
 from pymongo import MongoClient
+from threading import Thread
 
 # --- CONFIGURATION MATRIX ---
 API_ID = 38138069
@@ -25,51 +25,36 @@ db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
 groups_col = db["groups"]
 
-# --- INITIALIZE PYROGRAM CLIENT ---
-bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
-# --- FLASK APPLICATION (WSGI BIND) ---
+# --- FLASK APPLICATION INTERFACE ---
 app = Flask('')
 
 @app.route('/')
 def home(): 
     return "⚡ Ban X All Bot Is Ultra Flying Online ⚡"
 
-# Gunicorn setup hooks jo server ke sath loop coordinate karega
-def run_bot_in_background():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    # Registering all direct routing handlers inside loop thread
-    bot.add_handler(Client.on_message(filters.new_chat_members)(on_new_chat))
-    bot.add_handler(Client.on_message(filters.private & (filters.command("start") | filters.command("help")))(start_and_help_handler))
-    bot.add_handler(Client.on_message(filters.group)(database_group_tracker), group=1)
-    bot.add_handler(Client.on_message(filters.command("broadcast") & filters.user(OWNER_ID))(standard_broadcast))
-    bot.add_handler(Client.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))(broadcast_all_and_pin))
-    bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
-    bot.add_handler(Client.on_callback_query()(cb_handler))
-    
-    # Start execution loop safely
-    loop.run_until_complete(start_bot_safely())
+# --- PYROGRAM CLIENT ENGINE ---
+bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-async def start_bot_safely():
-    print("Initiating production sequence setup...")
-    while True:
-        try:
-            await bot.start()
-            print("🚀 BOT IS LIVE, VERIFIED AND STABLE ON RENDER ENVIRONMENT!")
-            break
-        except FloodWait as e:
-            print(f"⚠️ Launch Protection Triggered! Sleeping for {e.value}s...")
-            await asyncio.sleep(e.value)
+# --- ENGINE LOGIC BACKEND ---
+async def send_log(client, text):
+    try: await client.send_message(LOG_GROUP, f"🛰 **[ LOG SYSTEM ]**\n\n{text}")
+    except: pass
 
-# Thread trigger logic when WSGI worker initializes
-from threading import Thread
-bot_thread = Thread(target=run_bot_in_background)
-bot_thread.daemon = True
-bot_thread.start()
+async def check_force_join(client, user_id):
+    not_joined = []
+    for channel in FSUB_CHANNELS:
+        try: await client.get_chat_member(channel, user_id)
+        except UserNotParticipant: not_joined.append(channel)
+        except: pass
+    return not_joined
 
-# --- INTERACTIVE MATRICES & BUTTONS ---
+async def on_new_chat(client, message):
+    if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
+        if not groups_col.find_one({"chat_id": message.chat.id}):
+            groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
+        await send_log(client, f"📥 **ADDED TO NEW GROUP**\n\n👥 **Group:** {message.chat.title}")
+
+# --- BUTTONS MATRICES ---
 START_BUTTONS = InlineKeyboardMarkup([
     [InlineKeyboardButton("➕ Add Me To Your Group ➕", url=f"https://t.me/{BOT_USERNAME}?startgroup=true")],
     [
@@ -91,54 +76,16 @@ def get_start_caption(name):
         f"╚═════════════════════════╝\n\n"
         f"🚀 **Welcome to the Ultimate Ban X All Bot Engine!**\n\n"
         f"⚡ High-speed multi-threaded concurrency panel engineered to maintain, "
-        f"secure, or wipe redundant group assets at cyclone speeds.\n\n"
+        f"secure, or wipe redundant group assets.\n\n"
         f"📊 **System Status:** `Operational [Active]`\n"
-        f"👑 **Maintained By:** @CoderNova\n\n"
-        f"👉 *Click the buttons below to interact with my internal subsystems.*"
+        f"👑 **Maintained By:** @CoderNova"
     )
 
 def get_help_caption():
-    return (
-        f"╔═════════════════════════╗\n"
-        f"      🛠 **HELP & COMMANDS CENTER** \n"
-        f"╚═════════════════════════╝\n\n"
-        f"⚡ **Group Infrastructure Commands:**\n"
-        f"🔹 `/banall` — Sweeps all non-admin members immediately via parallel threads.\n\n"
-        f"👑 **Administrative Owner Matrix:**\n"
-        f"🔹 `/broadcast` — Sends replied message to all users & groups (No Pin).\n"
-        f"🔹 `/broadcast_all` — Sends replied message to all users & groups + **Auto Pins** the message globally."
-    )
+    return "⚡ **Commands Center:**\n\n🔹 `/banall` — Clear all non-admin members.\n🔹 `/broadcast` — Send message to all chats."
 
 def get_guide_caption():
-    return (
-        f"╔═════════════════════════╗\n"
-        f"       📖 **OPERATIONAL DEPLOY GUIDE** \n"
-        f"╚═════════════════════════╝\n\n"
-        f"📝 **How to correctly configure and fire the Ban All engine:**\n\n"
-        f"1️⃣ Click **Add Me To Your Group** button to invite the bot instance.\n"
-        f"2️⃣ Promote the bot directly into an **Administrator** role.\n"
-        f"3️⃣ Ensure the **Ban Users** structural control flag is enabled.\n"
-        f"4️⃣ Type `/banall` in the target group to activate cleanup protocols.\n\n"
-        f"🚫 **Safety Note:** Group creators and administrators are automatically skipped."
-    )
-
-async def send_log(client, text):
-    try: await client.send_message(LOG_GROUP, f"🛰 **[ LOG SYSTEM ]**\n\n{text}")
-    except: pass
-
-async def check_force_join(client, user_id):
-    not_joined = []
-    for channel in FSUB_CHANNELS:
-        try: await client.get_chat_member(channel, user_id)
-        except UserNotParticipant: not_joined.append(channel)
-        except: pass
-    return not_joined
-
-async def on_new_chat(client, message):
-    if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
-        if not groups_col.find_one({"chat_id": message.chat.id}):
-            groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
-        await send_log(client, f"📥 **ADDED TO NEW GROUP**\n\n👥 **Group:** {message.chat.title}")
+    return "📖 **Deploy Guide:**\n\n1️⃣ Add bot to group.\n2️⃣ Promote as admin with Ban permissions.\n3️⃣ Type `/banall`."
 
 async def start_and_help_handler(client, message):
     if not message.from_user: return
@@ -146,14 +93,12 @@ async def start_and_help_handler(client, message):
     
     if not users_col.find_one({"user_id": user_id}):
         users_col.insert_one({"user_id": user_id, "name": message.from_user.first_name})
-        await send_log(client, f"👤 **New User Registered:** {message.from_user.mention}")
 
     unsubscribed = await check_force_join(client, user_id)
     if unsubscribed:
         fsub_buttons = [
             [InlineKeyboardButton("📢 Ban All Update", url="https://t.me/Ban_All_Update")],
             [InlineKeyboardButton("🎧 Genu Bot Support", url="https://t.me/Genu_Bot_Support")],
-            [InlineKeyboardButton("💬 Support Chat (Join Req)", url="https://t.me/+S0l_wstPbWwzMDUx")],
             [InlineKeyboardButton("🔄 Verified & Continue", callback_data="verify_fsub")]
         ]
         return await message.reply_text("❌ **Access Denied!** Please join our channels to proceed.", reply_markup=InlineKeyboardMarkup(fsub_buttons))
@@ -168,42 +113,6 @@ async def database_group_tracker(client, message):
     if message.chat and message.chat.type != message.chat.type.PRIVATE:
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
-
-async def standard_broadcast(client, message):
-    if not message.reply_to_message: return await message.reply_text("❌ Reply to a message.")
-    progress = await message.reply_text("⚡ Broadcasting...")
-    targets = list(set([u["user_id"] for u in users_col.find()] + [g["chat_id"] for g in groups_col.find()]))
-    success = 0
-    for target in targets:
-        try:
-            await message.reply_to_message.copy(target)
-            success += 1
-        except FloodWait as e:
-            await asyncio.sleep(e.value)
-            await message.reply_to_message.copy(target)
-            success += 1
-        except: pass
-    await progress.edit(f"📢 Done! Sent to `{success}` chats.")
-
-async def broadcast_all_and_pin(client, message):
-    if not message.reply_to_message: return await message.reply_text("❌ Reply to a message.")
-    progress = await message.reply_text("💥 Pin Broadcasting...")
-    targets = list(set([u["user_id"] for u in users_col.find()] + [g["chat_id"] for g in groups_col.find()]))
-    success = 0
-    for target in targets:
-        try:
-            copied = await message.reply_to_message.copy(target)
-            success += 1
-            try: await copied.pin(both_sides=True)
-            except: pass
-        except FloodWait as e:
-            await asyncio.sleep(e.value)
-            copied = await message.reply_to_message.copy(target)
-            success += 1
-            try: await copied.pin(both_sides=True)
-            except: pass
-        except: pass
-    await progress.edit(f"🔥 Done! Sent & Pinned in `{success}` targets.")
 
 async def cb_handler(client, query: CallbackQuery):
     user_id = query.from_user.id
@@ -238,3 +147,37 @@ async def ban_all(client, message):
         except: pass
     await msg.edit(f"⚡ **Banned {count} users.** Leaving group...")
     await client.leave_chat(message.chat.id)
+
+# --- ASYNC PRODUCTION STARTER CONTAINER ---
+def run_pyrogram_pipeline():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    bot.add_handler(Client.on_message(filters.new_chat_members)(on_new_chat))
+    bot.add_handler(Client.on_message(filters.private & (filters.command("start") | filters.command("help")))(start_and_help_handler))
+    bot.add_handler(Client.on_message(filters.group)(database_group_tracker), group=1)
+    bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
+    bot.add_handler(Client.on_callback_query()(cb_handler))
+    
+    async def start_sequence():
+        while True:
+            try:
+                await bot.start()
+                print("🚀 PYROGRAM SYSTEM DETECTED: BOT ACTIVE!")
+                break
+            except FloodWait as e:
+                print(f"⚠️ Cooldown: Sleeping for {e.value}s")
+                await asyncio.sleep(e.value)
+    
+    loop.run_until_complete(start_sequence())
+    loop.run_forever()
+
+# Flask background daemon auto-hook
+@app.before_first_request
+def activate_bot_runtime():
+    pass
+
+# Direct thread injector on compilation
+bot_thread = Thread(target=run_pyrogram_pipeline)
+bot_thread.daemon = True
+bot_thread.start()
