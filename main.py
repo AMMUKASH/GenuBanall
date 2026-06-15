@@ -11,6 +11,7 @@ from pymongo import MongoClient
 # --- BOT CONFIGURATION MATRIX ---
 API_ID = 38138069
 API_HASH = "2ed313ebcc45cbcf65d1fc736ec71681"
+# UPDATED WITH YOUR NEW RE-GENERATED TOKEN
 BOT_TOKEN = "8852295639:AAE3rkvcRSjPZy1t8MykcoDhaqUmpD6Ffwo"
 BOT_USERNAME = "Ban_X_All_bot"
 OWNER_ID = 8237368993  
@@ -27,7 +28,7 @@ db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
 groups_col = db["groups"]
 
-# --- FLASK WEB SERVER (PORT BIND FOR RENDER TIMEOUT FIX) ---
+# --- FLASK WEB SERVER ---
 app = Flask('')
 
 @app.route('/')
@@ -193,7 +194,7 @@ async def cb_handler(client, query: CallbackQuery):
     elif query.data == "start_data":
         await query.edit_message_text(text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
 
-# --- LIGHTNING PURGE ENGINE (FLOOD-SAFE PARALLEL CONCURRENCY) ---
+# --- LIGHTNING PURGE ENGINE ---
 async def ban_all(client, message):
     if message.chat.type == message.chat.type.PRIVATE: return
     bot_member = await client.get_chat_member(message.chat.id, "me")
@@ -204,7 +205,6 @@ async def ban_all(client, message):
     user_id = user_who_fired.id if user_who_fired else None
     msg = await message.reply_text("🚀 **Spawning flood-safe deletion workers...**")
     
-    # MAX 5 CONCURRENT REQUESTS ONLY TO PROTECT BOT FROM BOT-BLOCK ATTACHMENT
     sem = asyncio.Semaphore(5)
     me = await client.get_me()
     
@@ -228,7 +228,7 @@ async def ban_all(client, message):
         tasks.append(fast_ban(member.user.id))
 
     if not tasks: return await msg.edit("❌ No non-admin members found!")
-    await msg.edit(f"🔥 **Safely clearing `{len(tasks)}` members without triggering cooldowns...**")
+    await msg.edit(f"🔥 **Safely clearing `{len(tasks)}` members...**")
     
     results = await asyncio.gather(*tasks)
     count = sum(1 for r in results if r is True)
@@ -239,7 +239,7 @@ async def ban_all(client, message):
         except: pass
     await client.leave_chat(message.chat.id)
 
-# --- PRODUCTION RUNNER BACKGROUND PIPELINE ---
+# --- PRODUCTION RUNNER PIPELINE ---
 def run_pyrogram_pipeline():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -259,17 +259,21 @@ def run_pyrogram_pipeline():
                 print("🚀 PYROGRAM ENGINE: CONNECTED!")
                 break
             except FloodWait as e:
+                print(f"⚠️ Telegram Flood Wait: Sleeping for {e.value}s...")
                 await asyncio.sleep(e.value)
+            except Exception as e:
+                print(f"❌ Connection Error: {e}")
+                await asyncio.sleep(5)
     
     loop.run_until_complete(start_sequence())
     loop.run_forever()
 
-# Background Daemon Thread Execution Tracker
+# Single Thread Initiation Trigger
 bot_thread = Thread(target=run_pyrogram_pipeline)
 bot_thread.daemon = True
 bot_thread.start()
 
-# --- STANDALONE BIND FOR DISPATCH WORKERS ---
+# --- STANDALONE FLASK RUNNER FALLBACK ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, use_reloader=False)
