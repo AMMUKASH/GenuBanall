@@ -29,7 +29,8 @@ FSUB_CHANNELS = ["Ban_All_Update", "Genu_Bot_Support"]
 
 # --- MONGO DB SETUP ---
 MONGO_URL = "mongodb+srv://misssqn_db_user:Nova01@cluster0.6xxsrwq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-db_client = MongoClient(MONGO_URL, srv_service_lookup=False)
+# srv_service_lookup hata diya taaki ConfigurationError permanently fix ho jaye
+db_client = MongoClient(MONGO_URL)
 db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
 groups_col = db["groups"]
@@ -139,7 +140,7 @@ async def main_handler(client, message):
 
     # Routing engine commands
     if message.chat.type == message.chat.type.PRIVATE and message.text and (message.text.startswith("/start") or message.text.startswith("/help")):
-        # 🔒 FORCE JOIN CHECK SUBSYSTEM
+        # 🔒 FORCE JOIN CHECK SUBSYSTEM (FSUB)
         unsubscribed = await check_force_join(client, user_id)
         if unsubscribed:
             fsub_buttons = [
