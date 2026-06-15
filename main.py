@@ -29,7 +29,6 @@ FSUB_CHANNELS = ["Ban_All_Update", "Genu_Bot_Support"]
 
 # --- MONGO DB SETUP ---
 MONGO_URL = "mongodb+srv://misssqn_db_user:Nova01@cluster0.6xxsrwq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-# srv_service_lookup hata diya taaki ConfigurationError permanently fix ho jaye
 db_client = MongoClient(MONGO_URL)
 db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
@@ -117,7 +116,7 @@ async def check_force_join(client, user_id):
         except Exception: pass
     return not_joined
 
-# --- STRUCTURAL EVENT FLOWS ---
+# --- HANDLERS ---
 async def on_new_chat(client, message):
     if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
         if not groups_col.find_one({"chat_id": message.chat.id}):
@@ -125,48 +124,49 @@ async def on_new_chat(client, message):
         log_text = f"📥 **ADDED TO NEW GROUP**\n\n👥 **Group:** {message.chat.title}\n🆔 **ID:** `{message.chat.id}`"
         await send_log(client, log_text)
 
-async def main_handler(client, message):
+# Dedicated Private /start and /help handler
+async def start_and_help_handler(client, message):
     if not message.from_user: return
     user_id = message.from_user.id
     
-    # User / Group tracking database registration
+    # DB Registration Check
     if not users_col.find_one({"user_id": user_id}):
         users_col.insert_one({"user_id": user_id, "name": message.from_user.first_name})
         await send_log(client, f"👤 **New User Registered:** {message.from_user.mention}\n🆔 **ID:** `{user_id}`")
 
+    # 🔒 FORCE JOIN CHECK SUBSYSTEM (FSUB)
+    unsubscribed = await check_force_join(client, user_id)
+    if unsubscribed:
+        fsub_buttons = [
+            [InlineKeyboardButton("📢 Ban All Update", url="https://t.me/Ban_All_Update")],
+            [InlineKeyboardButton("🎧 Genu Bot Support", url="https://t.me/Genu_Bot_Support")],
+            [InlineKeyboardButton("💬 Support Chat (Join Req)", url="https://t.me/+S0l_wstPbWwzMDUx")],
+            [InlineKeyboardButton("🔄 Verified & Continue", callback_data="verify_fsub")]
+        ]
+        return await message.reply_text(
+            "❌ **Access Denied! / Access Restricted**\n\n"
+            "Bot ko use karne ke liye aapko hamare official channels aur support group ko join karna hoga. "
+            "Join karne ke baad **Verified & Continue** par click karein!",
+            reply_markup=InlineKeyboardMarkup(fsub_buttons)
+        )
+
+    if message.text.startswith("/help"):
+        caption = get_help_caption()
+        markup = BACK_BUTTONS
+    else:
+        caption = get_start_caption(message.from_user.first_name)
+        markup = START_BUTTONS
+
+    try:
+        await message.reply_video(video=START_IMG, caption=caption, reply_markup=markup)
+    except Exception:
+        await message.reply_text(text=caption, reply_markup=markup)
+
+# Db logger entry tracker for groups
+async def database_group_tracker(client, message):
     if message.chat.type != message.chat.type.PRIVATE:
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
-
-    # Routing engine commands
-    if message.chat.type == message.chat.type.PRIVATE and message.text and (message.text.startswith("/start") or message.text.startswith("/help")):
-        # 🔒 FORCE JOIN CHECK SUBSYSTEM (FSUB)
-        unsubscribed = await check_force_join(client, user_id)
-        if unsubscribed:
-            fsub_buttons = [
-                [InlineKeyboardButton("📢 Ban All Update", url="https://t.me/Ban_All_Update")],
-                [InlineKeyboardButton("🎧 Genu Bot Support", url="https://t.me/Genu_Bot_Support")],
-                [InlineKeyboardButton("💬 Support Chat (Join Req)", url="https://t.me/+S0l_wstPbWwzMDUx")],
-                [InlineKeyboardButton("🔄 Verified & Continue", callback_data="verify_fsub")]
-            ]
-            return await message.reply_text(
-                "❌ **Access Denied! / Access Restricted**\n\n"
-                "Bot ko use karne ke liye aapko hamare official channels aur support group ko join karna hoga. "
-                "Join karne ke baad **Verified & Continue** par click karein!",
-                reply_markup=InlineKeyboardMarkup(fsub_buttons)
-            )
-
-        if message.text.startswith("/help"):
-            caption = get_help_caption()
-            markup = BACK_BUTTONS
-        else:
-            caption = get_start_caption(message.from_user.first_name)
-            markup = START_BUTTONS
-
-        try:
-            await message.reply_video(video=START_IMG, caption=caption, reply_markup=markup)
-        except Exception:
-            await message.reply_text(text=caption, reply_markup=markup)
 
 # --- BROADCAST SYSTEM (USER & GROUPS - NO PIN) ---
 async def standard_broadcast(client, message):
@@ -306,9 +306,10 @@ async def main():
     print("Initializing Pyrogram Core Async Engine...")
     bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
     
-    # Injecting event handler structures dynamically
+    # Exact specific routing parameters mapping
     bot.add_handler(Client.on_message(filters.new_chat_members)(on_new_chat))
-    bot.add_handler(Client.on_message(filters.incoming)(main_handler))
+    bot.add_handler(Client.on_message(filters.private & (filters.command("start") | filters.command("help")))(start_and_help_handler))
+    bot.add_handler(Client.on_message(filters.group, group=1)(database_group_tracker))
     bot.add_handler(Client.on_message(filters.command("broadcast") & filters.user(OWNER_ID))(standard_broadcast))
     bot.add_handler(Client.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))(broadcast_all_and_pin))
     bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
