@@ -37,15 +37,20 @@ bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN
 
 # --- ENGINE LOGIC BACKEND ---
 async def send_log(client, text):
-    try: await client.send_message(LOG_GROUP, f"🛰 **[ LOG SYSTEM ]**\n\n{text}")
-    except: pass
+    try: 
+        await client.send_message(LOG_GROUP, f"🛰 **[ LOG SYSTEM ]**\n\n{text}")
+    except: 
+        pass
 
 async def check_force_join(client, user_id):
     not_joined = []
     for channel in FSUB_CHANNELS:
-        try: await client.get_chat_member(channel, user_id)
-        except UserNotParticipant: not_joined.append(channel)
-        except: pass
+        try: 
+            await client.get_chat_member(channel, user_id)
+        except UserNotParticipant: 
+            not_joined.append(channel)
+        except: 
+            pass
     return not_joined
 
 async def on_new_chat(client, message):
@@ -106,8 +111,10 @@ async def start_and_help_handler(client, message):
     if message.text.startswith("/help"):
         await message.reply_text(text=get_help_caption(), reply_markup=BACK_BUTTONS)
     else:
-        try: await message.reply_video(video=START_IMG, caption=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
-        except: await message.reply_text(text=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
+        try: 
+            await message.reply_video(video=START_IMG, caption=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
+        except: 
+            await message.reply_text(text=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
 
 async def database_group_tracker(client, message):
     if message.chat and message.chat.type != message.chat.type.PRIVATE:
@@ -118,7 +125,8 @@ async def cb_handler(client, query: CallbackQuery):
     user_id = query.from_user.id
     if query.data == "verify_fsub":
         unsubscribed = await check_force_join(client, user_id)
-        if unsubscribed: return await query.answer("⚠️ Join all channels first!", show_alert=True)
+        if unsubscribed: 
+            return await query.answer("⚠️ Join all channels first!", show_alert=True)
         await query.answer("✅ Verified!")
         await query.message.delete()
         await client.send_message(chat_id=user_id, text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
@@ -139,17 +147,21 @@ async def ban_all(client, message):
     me = await client.get_me()
     count = 0
     async for member in client.get_chat_members(message.chat.id):
-        if member.status in ["administrator", "creator"] or member.user.id == me.id: continue
+        if member.status in ["administrator", "creator"] or member.user.id == me.id: 
+            continue
         try:
             await client.ban_chat_member(message.chat.id, member.user.id)
             count += 1
-        except FloodWait as e: await asyncio.sleep(e.value)
-        except: pass
+        except FloodWait as e: 
+            await asyncio.sleep(e.value)
+        except: 
+            pass
     await msg.edit(f"⚡ **Banned {count} users.** Leaving group...")
     await client.leave_chat(message.chat.id)
 
 # --- ASYNC PRODUCTION STARTER CONTAINER ---
 def run_pyrogram_pipeline():
+    # Naya fully synchronized asyncio loop generate kiya thread space me
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
@@ -172,7 +184,7 @@ def run_pyrogram_pipeline():
     loop.run_until_complete(start_sequence())
     loop.run_forever()
 
-# Global scope thread startup logic (Bypassed Flask Hook Attribute Error)
+# Custom Flask configuration se dependency hata kar background thread ko optimize kiya
 bot_thread = Thread(target=run_pyrogram_pipeline)
 bot_thread.daemon = True
 bot_thread.start()
