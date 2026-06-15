@@ -7,6 +7,7 @@ from pyrogram.errors import UserNotParticipant, FloodWait
 from flask import Flask
 from threading import Thread
 from pymongo import MongoClient
+import requests
 
 # --- BOT CONFIGURATION MATRIX ---
 API_ID = 38138069
@@ -32,7 +33,7 @@ app = Flask('')
 
 @app.route('/')
 def home(): 
-    return "⚡ Ban X All Bot Engine Status: ACTIVE ⚡"
+    return "⚡ Ban X All Bot Engine Status: ULTRA ACTIVE ⚡"
 
 # --- PYROGRAM CLIENT ENGINE ---
 bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
@@ -242,17 +243,33 @@ async def ban_all(client, message):
         except: pass
     await client.leave_chat(message.chat.id)
 
-# --- WEB DRIVER STABILIZER FOR PYROGRAM INTERNAL LOOP ---
-def run_flask():
+# --- HYBRID RUNNER CORE (NON-BLOCKING ENGINE FOR WEB + BOT) ---
+async def start_services():
+    print("🛰 INITIATING BOT WORKERS IN MASTER LOOP...")
+    # Step 1: Start Telegram Client
+    await bot.start()
+    print("🚀 PYROGRAM CLIENT ENGINE: STATUS -> 100% CONNECTED!")
+    
+    # Step 2: Fire Hypercorn/Flask Non-blocking listener on explicit port
+    port = int(os.environ.get("PORT", 8080))
+    from juiceserver import run_async_server # Dynamic compilation anchor
+    
+    # Keeping loops alive continuously inside single executor channel
+    await asyncio.gather(
+        run_async_server(app, port),
+        asyncio.Event().wait()
+    )
+
+def start_flask_bridge():
+    # Helper wrapper for standard wsgi redirection
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, use_reloader=False, threaded=True)
 
-# Run Flask on a completely safe separate daemon channel
-flask_thread = Thread(target=run_flask)
-flask_thread.daemon = True
-flask_thread.start()
-
-# --- MAIN BLOCKING LOOP FOR TG CONNECTIONS ---
 if __name__ == "__main__":
-    print("🚀 TIMED EXECUTION: INITIATING PYROGRAM ENGINE...")
+    # Dual-Channel Execution Engine standard integration
+    t = Thread(target=start_flask_bridge)
+    t.daemon = True
+    t.start()
+    
+    print("🚀 FIRESUPPRESSION TRIGGERED: RUNNING TG ENGINE...")
     bot.run()
