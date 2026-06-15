@@ -11,7 +11,6 @@ from pymongo import MongoClient
 # --- BOT CONFIGURATION MATRIX ---
 API_ID = 38138069
 API_HASH = "2ed313ebcc45cbcf65d1fc736ec71681"
-# UPDATED WITH YOUR NEW RE-GENERATED TOKEN
 BOT_TOKEN = "8852295639:AAE3rkvcRSjPZy1t8MykcoDhaqUmpD6Ffwo"
 BOT_USERNAME = "Ban_X_All_bot"
 OWNER_ID = 8237368993  
@@ -33,7 +32,7 @@ app = Flask('')
 
 @app.route('/')
 def home(): 
-    return "⚡ Ban X All Bot Is Ultra Flying Online ⚡"
+    return "⚡ Ban X All Bot Engine Status: ACTIVE ⚡"
 
 # --- PYROGRAM CLIENT ENGINE ---
 bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
@@ -106,12 +105,14 @@ async def check_force_join(client, user_id):
     return not_joined
 
 # --- STRUCTURAL ENGINE LOGIC FLOORS ---
+@bot.on_message(filters.new_chat_members)
 async def on_new_chat(client, message):
     if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
         await send_log(client, f"📥 **ADDED TO NEW GROUP**\n\n👥 **Group:** {message.chat.title}")
 
+@bot.on_message(filters.private & (filters.command("start") | filters.command("help")))
 async def start_and_help_handler(client, message):
     if not message.from_user: return
     user_id = message.from_user.id
@@ -136,12 +137,13 @@ async def start_and_help_handler(client, message):
         try: await message.reply_video(video=START_IMG, caption=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
         except: await message.reply_text(text=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
 
+@bot.on_message(filters.group, group=1)
 async def database_group_tracker(client, message):
     if message.chat and message.chat.type != message.chat.type.PRIVATE:
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
 
-# --- BROADCAST SYSTEMS ---
+@bot.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
 async def standard_broadcast(client, message):
     if not message.reply_to_message: return await message.reply_text("❌ Reply to a message.")
     progress = await message.reply_text("⚡ Standard Broadcasting Running...")
@@ -158,6 +160,7 @@ async def standard_broadcast(client, message):
         except: pass
     await progress.edit(f"📢 Done! Sent to `{success}` chats.")
 
+@bot.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))
 async def broadcast_all_and_pin(client, message):
     if not message.reply_to_message: return await message.reply_text("❌ Reply to a message.")
     progress = await message.reply_text("💥 Pin Broadcasting Running...")
@@ -178,7 +181,7 @@ async def broadcast_all_and_pin(client, message):
         except: pass
     await progress.edit(f"🔥 Done! Pinned in `{success}` targets.")
 
-# --- CALLBACK ROUTER ---
+@bot.on_callback_query()
 async def cb_handler(client, query: CallbackQuery):
     user_id = query.from_user.id
     if query.data == "verify_fsub":
@@ -194,7 +197,7 @@ async def cb_handler(client, query: CallbackQuery):
     elif query.data == "start_data":
         await query.edit_message_text(text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
 
-# --- LIGHTNING PURGE ENGINE ---
+@bot.on_message(filters.command("banall"))
 async def ban_all(client, message):
     if message.chat.type == message.chat.type.PRIVATE: return
     bot_member = await client.get_chat_member(message.chat.id, "me")
@@ -239,41 +242,17 @@ async def ban_all(client, message):
         except: pass
     await client.leave_chat(message.chat.id)
 
-# --- PRODUCTION RUNNER PIPELINE ---
-def run_pyrogram_pipeline():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    bot.add_handler(Client.on_message(filters.new_chat_members)(on_new_chat))
-    bot.add_handler(Client.on_message(filters.private & (filters.command("start") | filters.command("help")))(start_and_help_handler))
-    bot.add_handler(Client.on_message(filters.group)(database_group_tracker), group=1)
-    bot.add_handler(Client.on_message(filters.command("broadcast") & filters.user(OWNER_ID))(standard_broadcast))
-    bot.add_handler(Client.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))(broadcast_all_and_pin))
-    bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
-    bot.add_handler(Client.on_callback_query()(cb_handler))
-    
-    async def start_sequence():
-        while True:
-            try:
-                await bot.start()
-                print("🚀 PYROGRAM ENGINE: CONNECTED!")
-                break
-            except FloodWait as e:
-                print(f"⚠️ Telegram Flood Wait: Sleeping for {e.value}s...")
-                await asyncio.sleep(e.value)
-            except Exception as e:
-                print(f"❌ Connection Error: {e}")
-                await asyncio.sleep(5)
-    
-    loop.run_until_complete(start_sequence())
-    loop.run_forever()
-
-# Single Thread Initiation Trigger
-bot_thread = Thread(target=run_pyrogram_pipeline)
-bot_thread.daemon = True
-bot_thread.start()
-
-# --- STANDALONE FLASK RUNNER FALLBACK ---
-if __name__ == "__main__":
+# --- WEB DRIVER STABILIZER FOR PYROGRAM INTERNAL LOOP ---
+def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, use_reloader=False)
+    app.run(host="0.0.0.0", port=port, use_reloader=False, threaded=True)
+
+# Run Flask on a completely safe separate daemon channel
+flask_thread = Thread(target=run_flask)
+flask_thread.daemon = True
+flask_thread.start()
+
+# --- MAIN BLOCKING LOOP FOR TG CONNECTIONS ---
+if __name__ == "__main__":
+    print("🚀 TIMED EXECUTION: INITIATING PYROGRAM ENGINE...")
+    bot.run()
