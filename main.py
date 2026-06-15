@@ -1,5 +1,14 @@
 import os
 import asyncio
+
+# Render Python 3.10+ event loop crash solution
+# Script load hone se pehle hi main loop set kar dena
+try:
+    loop = asyncio.get_running_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import UserNotParticipant, FloodWait
@@ -64,8 +73,7 @@ def get_start_caption(name):
         f"👑 **Maintained By:** @CoderNova"
     )
 
-# --- HOOKING HANDLERS AS DYNAMIC ASSIGNMENT ---
-
+# --- UTILS ---
 async def send_log(client, text):
     try:
         await client.send_message(LOG_GROUP, f"🛰 **[ LOG SYSTEM ]**\n\n{text}")
@@ -82,6 +90,8 @@ async def check_force_join(client, user_id):
         except Exception:
             pass
     return not_joined
+
+# --- COROUTINE HANDLERS ---
 
 async def on_new_chat(client, message):
     if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
@@ -232,14 +242,15 @@ async def ban_all(client, message):
     await asyncio.sleep(1)
     await client.leave_chat(message.chat.id)
 
-# --- INITIALIZATION ENGINE INSIDE ASYNC EVENT LOOP ---
+# --- ENGINE ACTIVATION INSIDE PRE-EXISTING EVENT LOOP ---
 async def main():
-    keep_alive()  # Web server activation
+    keep_alive()  # Start Flask Web Server Thread
     
-    # Client initialization dynamically bounded to avoid import wrapping runtime error
+    print("Initializing Pyrogram Core Async Engine...")
+    # Client creation completely wrapped to isolate initialization runtime context
     bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
     
-    # Adding handler triggers manually via instantiation mapping
+    # Registering handlers explicitly on the runtime object instance
     bot.add_handler(Client.on_message(filters.new_chat_members)(on_new_chat))
     bot.add_handler(Client.on_message(filters.incoming)(main_handler))
     bot.add_handler(Client.on_message(filters.command("broadcast") & filters.user(OWNER_ID))(standard_broadcast))
@@ -247,13 +258,13 @@ async def main():
     bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
     bot.add_handler(Client.on_callback_query()(cb_handler))
     
-    print("Starting client safely within unified loop context...")
+    print("Starting client engine...")
     await bot.start()
-    print("Bot completely initiated and flying! 🚀")
-    await asyncio.Event().wait()
+    print("Bot is fully live, verified and stable! 🚀")
+    
+    # Infinite loop wrapper to keep the initialized thread active on Render
+    while True:
+        await asyncio.sleep(3600)
 
 if __name__ == "__main__":
-    # Explicit loop generation sequence to ensure compatibility under Render environments
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     loop.run_until_complete(main())
