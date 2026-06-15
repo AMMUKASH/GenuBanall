@@ -2,7 +2,7 @@ import os
 import asyncio
 import sys
 
-# --- EVENT LOOP CONFIGURATION FOR PRODUCTION ---
+# --- RENDER/LINUX CONCURRENCY PROTECTION ---
 try:
     loop = asyncio.get_running_loop()
 except RuntimeError:
@@ -16,7 +16,7 @@ from flask import Flask
 from threading import Thread
 from pymongo import MongoClient
 
-# --- CONFIGURATION MAPPING ---
+# --- BOT CONFIGURATION MATRIX ---
 API_ID = 38138069
 API_HASH = "2ed313ebcc45cbcf65d1fc736ec71681"
 BOT_TOKEN = "8852295639:AAGgw7gPVj5TjmrTNKmOLWfDtHaaP3V2XYA"
@@ -25,28 +25,32 @@ OWNER_ID = 8237368993
 LOG_GROUP = -1003947649552  
 START_IMG = "https://files.catbox.moe/srmw3t.mp4"
 
-# --- FORCE JOIN CONFIGURATION (FSUB) ---
+# --- FORCE JOIN CONFIGURATION ---
 FSUB_CHANNELS = ["Ban_All_Update", "Genu_Bot_Support"]
 
-# --- MONGO DB SETUP ---
-MONGO_URL = "mongodb+srv://misssqn_db_user:Nova01@cluster0.6xxsrwq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# --- MONGO DB CONNECTION (FULLY REPAIR PARAMETERS) ---
+# Yahan se '&appName=Cluster0' ko clear hata diya hai taaki pymongo module crash na ho.
+MONGO_URL = "mongodb+srv://misssqn_db_user:Nova01@cluster0.6xxsrwq.mongodb.net/?retryWrites=true&w=majority"
 db_client = MongoClient(MONGO_URL)
 db = db_client["BanXAllBot_DB"]
 users_col = db["users"]
 groups_col = db["groups"]
 
-# --- WEB SERVER (RENDER KEEP ALIVE) ---
+# --- FLASK WEB SERVER (RENDER ALIVE AGENT) ---
 app = Flask('')
 @app.route('/')
-def home(): return "⚡ Ban X All Bot Is Ultra Flying Online ⚡"
+def home(): 
+    return "⚡ Ban X All Bot Is Ultra Flying Online ⚡"
 
-def run(): app.run(host='0.0.0.0', port=8080)
+def run(): 
+    app.run(host='0.0.0.0', port=8080)
+
 def keep_alive():
     t = Thread(target=run)
     t.daemon = True
     t.start()
 
-# --- BUTTONS & PANELS MATRIX ---
+# --- INTERACTIVE BUTTON MATRICES ---
 START_BUTTONS = InlineKeyboardMarkup([
     [InlineKeyboardButton("➕ Add Me To Your Group ➕", url=f"https://t.me/{BOT_USERNAME}?startgroup=true")],
     [
@@ -61,7 +65,7 @@ START_BUTTONS = InlineKeyboardMarkup([
 
 BACK_BUTTONS = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="start_data")]])
 
-# --- CAPTIONS GENERATOR ---
+# --- DYNAMIC CAPTION GENERATORS ---
 def get_start_caption(name):
     return (
         f"╔═════════════════════════╗\n"
@@ -100,40 +104,41 @@ def get_guide_caption():
         f"🚫 **Safety Note:** Group creators and administrators are automatically skipped."
     )
 
-# --- UTILITY INTEGRATIONS ---
+# --- SYSTEM LOGGER & FSUB CHECKS ---
 async def send_log(client, text):
-    try:
+    try: 
         await client.send_message(LOG_GROUP, f"🛰 **[ LOG SYSTEM ]**\n\n{text}")
-    except Exception as e:
-        print(f"Logging Error: {e}")
+    except: 
+        pass
 
 async def check_force_join(client, user_id):
     not_joined = []
     for channel in FSUB_CHANNELS:
-        try:
+        try: 
             await client.get_chat_member(channel, user_id)
-        except UserNotParticipant:
+        except UserNotParticipant: 
             not_joined.append(channel)
-        except Exception: pass
+        except: 
+            pass
     return not_joined
 
-# --- STRUCTURAL ENGINE LOGIC FLOORS ---
+# --- STRUCTURAL INTERCEPTORS & HANDLERS ---
 async def on_new_chat(client, message):
     if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
-        log_text = f"📥 **ADDED TO NEW GROUP**\n\n👥 **Group:** {message.chat.title}\n🆔 **ID:** `{message.chat.id}`"
-        await send_log(client, log_text)
+        await send_log(client, f"📥 **ADDED TO NEW GROUP**\n\n👥 **Group:** {message.chat.title}")
 
 async def start_and_help_handler(client, message):
     if not message.from_user: return
     user_id = message.from_user.id
     
+    # Auto-Registration Flow
     if not users_col.find_one({"user_id": user_id}):
         users_col.insert_one({"user_id": user_id, "name": message.from_user.first_name})
-        await send_log(client, f"👤 **New User Registered:** {message.from_user.mention}\n🆔 **ID:** `{user_id}`")
+        await send_log(client, f"👤 **New User Registered:** {message.from_user.mention}")
 
-    # 🔒 FORCE JOIN CHECK SUBSYSTEM (FSUB BUTTONS)
+    # Force Join Restriction Validation
     unsubscribed = await check_force_join(client, user_id)
     if unsubscribed:
         fsub_buttons = [
@@ -144,40 +149,30 @@ async def start_and_help_handler(client, message):
         ]
         return await message.reply_text(
             "❌ **Access Denied! / Access Restricted**\n\n"
-            "Bot ko use karne ke liye aapko hamare official channels aur support group ko join karna hoga. "
-            "Join karne ke baad **Verified & Continue** par click karein!",
+            "Bot ko use karne ke liye aapko hamare channels ko join karna hoga. Join karke confirm karein!", 
             reply_markup=InlineKeyboardMarkup(fsub_buttons)
         )
 
     if message.text.startswith("/help"):
-        caption = get_help_caption()
-        markup = BACK_BUTTONS
+        await message.reply_text(text=get_help_caption(), reply_markup=BACK_BUTTONS)
     else:
-        caption = get_start_caption(message.from_user.first_name)
-        markup = START_BUTTONS
-
-    try:
-        await message.reply_video(video=START_IMG, caption=caption, reply_markup=markup)
-    except Exception:
-        await message.reply_text(text=caption, reply_markup=markup)
+        try: 
+            await message.reply_video(video=START_IMG, caption=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
+        except: 
+            await message.reply_text(text=get_start_caption(message.from_user.first_name), reply_markup=START_BUTTONS)
 
 async def database_group_tracker(client, message):
     if message.chat and message.chat.type != message.chat.type.PRIVATE:
         if not groups_col.find_one({"chat_id": message.chat.id}):
             groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
 
-# --- BROADCAST SYSTEM (NO PIN) ---
+# --- BROADCAST SYSTEM PANEL ---
 async def standard_broadcast(client, message):
     if not message.reply_to_message:
-        return await message.reply_text("❌ **Reply to a message to initiate standard broadcast (No Pin).**")
-        
-    progress = await message.reply_text("⚡ **Initiating Standard Global Broadcast (Users + Groups)...**")
-    
-    all_users = [user["user_id"] for user in users_col.find()]
-    all_groups = [group["chat_id"] for group in groups_col.find()]
-    targets = list(set(all_users + all_groups))
-    
-    success, failed = 0, 0
+        return await message.reply_text("❌ **Reply to a message to broadcast.**")
+    progress = await message.reply_text("⚡ **Standard Global Broadcast Running...**")
+    targets = list(set([u["user_id"] for u in users_col.find()] + [g["chat_id"] for g in groups_col.find()]))
+    success = 0
     for target in targets:
         try:
             await message.reply_to_message.copy(target)
@@ -186,125 +181,79 @@ async def standard_broadcast(client, message):
             await asyncio.sleep(e.value)
             await message.reply_to_message.copy(target)
             success += 1
-        except Exception: 
-            failed += 1
-            
-    await progress.edit(f"📢 **Standard Broadcast Complete!**\n\n✅ **Delivered Chats:** `{success}`\n❌ **Failed/Blocked:** `{failed}`")
+        except: pass
+    await progress.edit(f"📢 **Broadcast Complete! Sent to `{success}` chats.**")
 
-# --- BROADCAST ALL SYSTEM (+ GLOBAL AUTO PIN) ---
 async def broadcast_all_and_pin(client, message):
     if not message.reply_to_message:
-        return await message.reply_text("❌ **Reply to a message to initiate advanced broadcast (With Auto-Pin).**")
-        
-    progress = await message.reply_text("💥 **Initiating Mega Broadcast & Global Auto-Pin Matrix...**")
-    
-    all_users = [user["user_id"] for user in users_col.find()]
-    all_groups = [group["chat_id"] for group in groups_col.find()]
-    targets = list(set(all_users + all_groups))
-    
-    success, failed = 0, 0
+        return await message.reply_text("❌ **Reply to a message to broadcast with Pin.**")
+    progress = await message.reply_text("💥 **Mega Broadcast & Auto-Pin Matrix Running...**")
+    targets = list(set([u["user_id"] for u in users_col.find()] + [g["chat_id"] for g in groups_col.find()]))
+    success = 0
     for target in targets:
         try:
-            copied_msg = await message.reply_to_message.copy(target)
+            copied = await message.reply_to_message.copy(target)
             success += 1
-            try: 
-                await copied_msg.pin(both_sides=True)
-            except: 
-                pass  
+            try: await copied.pin(both_sides=True)
+            except: pass
         except FloodWait as e:
             await asyncio.sleep(e.value)
-            copied_msg = await message.reply_to_message.copy(target)
+            copied = await message.reply_to_message.copy(target)
             success += 1
-            try: 
-                await copied_msg.pin(both_sides=True)
-            except: 
-                pass
-        except Exception: 
-            failed += 1
-            
-    await progress.edit(f"🔥 **Mega Broadcast All Completed!**\n\n✅ **Total Sent & Pinned:** `{success}`\n❌ **Failed Destinations:** `{failed}`")
+            try: await copied.pin(both_sides=True)
+            except: pass
+        except: pass
+    await progress.edit(f"🔥 **Mega Broadcast Completed! Sent & Pinned in `{success}` targets.**")
 
-# --- CALLBACK INTERACTION ROUTER ---
+# --- CALLBACK INTERACTIONS ROUTER ---
 async def cb_handler(client, query: CallbackQuery):
     user_id = query.from_user.id
     if query.data == "verify_fsub":
         unsubscribed = await check_force_join(client, user_id)
-        if unsubscribed:
-            return await query.answer("⚠️ Aapne abhi tak saare channels join nahi kiye hain! Join karke check karein.", show_alert=True)
-        await query.answer("✅ Verification Successful!", show_alert=True)
-        caption = get_start_caption(query.from_user.first_name)
-        try:
-            await query.message.delete()
-            await client.send_video(chat_id=user_id, video=START_IMG, caption=caption, reply_markup=START_BUTTONS)
-        except Exception:
-            await client.send_message(chat_id=user_id, text=caption, reply_markup=START_BUTTONS)
-            
+        if unsubscribed: 
+            return await query.answer("⚠️ Aapne abhi tak saare channels join nahi kiye hain!", show_alert=True)
+        await query.answer("✅ Verification Successful!")
+        await query.message.delete()
+        await client.send_message(chat_id=user_id, text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
     elif query.data == "help_data":
-        caption = get_help_caption()
-        try: await query.edit_message_caption(caption=caption, reply_markup=BACK_BUTTONS)
-        except Exception: await query.edit_message_text(text=caption, reply_markup=BACK_BUTTONS)
-        
+        await query.edit_message_text(text=get_help_caption(), reply_markup=BACK_BUTTONS)
     elif query.data == "guide_data":
-        caption = get_guide_caption()
-        try: await query.edit_message_caption(caption=caption, reply_markup=BACK_BUTTONS)
-        except Exception: await query.edit_message_text(text=caption, reply_markup=BACK_BUTTONS)
-        
+        await query.edit_message_text(text=get_guide_caption(), reply_markup=BACK_BUTTONS)
     elif query.data == "start_data":
-        caption = get_start_caption(query.from_user.first_name)
-        try: await query.edit_message_caption(caption=caption, reply_markup=START_BUTTONS)
-        except Exception: await query.edit_message_text(text=caption, reply_markup=START_BUTTONS)
+        await query.edit_message_text(text=get_start_caption(query.from_user.first_name), reply_markup=START_BUTTONS)
 
-# --- CORE LIGHTNING BANALL PROTOCOL ---
+# --- LIGHTNING PURGE ENGINE ---
 async def ban_all(client, message):
-    if message.chat.type == message.chat.type.PRIVATE:
-        return await message.reply_text("❌ This command can only be executed within groups!")
+    if message.chat.type == message.chat.type.PRIVATE: return
     bot_member = await client.get_chat_member(message.chat.id, "me")
     if not bot_member.privileges or not bot_member.privileges.can_restrict_members:
-        return await message.reply_text("❌ Admin Access Denied! Please grant me 'Ban Users' permissions.")
-
-    user_who_fired = message.from_user
-    user_id = user_who_fired.id if user_who_fired else None
-    await send_log(client, f"🚨 **CYCLONE PURGE INITIATED**\n**Group:** {message.chat.title}")
-    msg = await message.reply_text("🚀 **Spawning parallel processing threads...**")
-
-    async def fast_ban(user_id_to_ban):
+        return await message.reply_text("❌ Mujhe admin banao aur 'Ban Users' permission allow karo!")
+    
+    msg = await message.reply_text("🚀 **Spawning structural deletion threads...**")
+    me = await client.get_me()
+    count = 0
+    
+    async for member in client.get_chat_members(message.chat.id):
+        if member.status in ["administrator", "creator"] or member.user.id == me.id: 
+            continue
         try:
-            await client.ban_chat_member(message.chat.id, user_id_to_ban)
-            return True
+            await client.ban_chat_member(message.chat.id, member.user.id)
+            count += 1
         except FloodWait as e:
             await asyncio.sleep(e.value)
-            try:
-                await client.ban_chat_member(message.chat.id, user_id_to_ban)
-                return True
-            except: return False
-        except Exception: return False
-
-    tasks = []
-    me = await client.get_me()
-    async for member in client.get_chat_members(message.chat.id):
-        if member.status in ["administrator", "creator"] or member.user.id == me.id:
-            continue
-        tasks.append(fast_ban(member.user.id))
-
-    if not tasks: return await msg.edit("❌ **No non-admin members found to clear!**")
-    await msg.edit(f"🔥 **Purging `{len(tasks)}` members instantly...**")
-    results = await asyncio.gather(*tasks)
-    count = sum(1 for r in results if r is True)
-    await msg.edit(f"⚡ **Purge Completed! Banned:** `{count}`\n🚪 Leaving group automatically...")
-    
-    if user_id:
-        try: await client.send_message(chat_id=user_id, text=f"📊 **HISTORY REPORT**\n\nGroup: {message.chat.title}\nBanned: `{count}`")
-        except: pass
-    await asyncio.sleep(1)
+        except: 
+            pass
+            
+    await msg.edit(f"⚡ **Purge Completed! Total Banned:** `{count}`\n🚪 Leaving group automatically...")
     await client.leave_chat(message.chat.id)
 
-# --- MAIN ASYNC CORE ENGINE RUNNER WITH FLOODWAIT SAFETY ---
+# --- MAIN ASYNC CORE ENGINE RUNNER (WITH AUTOMATIC RETRY LAUNCH) ---
 async def main():
-    keep_alive()  # Activates local web service for Render uptime
-    print("Initializing Pyrogram Core Async Engine...")
+    keep_alive()  
+    print("Pre-loading Structural Pipeline Routing...")
     bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
     
-    # --- EXPLICIT DIRECT HANDLER REGISTRATION ---
+    # ROUTING SYSTEM SPECIFICATION
     bot.add_handler(Client.on_message(filters.new_chat_members)(on_new_chat))
     bot.add_handler(Client.on_message(filters.private & (filters.command("start") | filters.command("help")))(start_and_help_handler))
     bot.add_handler(Client.on_message(filters.group)(database_group_tracker), group=1)
@@ -313,17 +262,18 @@ async def main():
     bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
     bot.add_handler(Client.on_callback_query()(cb_handler))
     
-    # Auto loop to retry connection if Telegram triggers FloodWait on launch
+    print("Bot launch system sequence initiated...")
+    
     while True:
         try:
             await bot.start()
-            print("Bot is fully live, verified, and stable on Render! 🚀")
+            print("🚀 BOT IS LIVE, SECURE AND RUNNING ON RENDER ENGINE!")
             break
-        except FloodWait as e:
-            print(f"⚠️ Telegram Launch Protection Active! Sleeping for {e.value} seconds...")
-            await asyncio.sleep(e.value)
+        except FloodWait as tg_cooldown:
+            print(f"⚠️ Launch Protection Triggered! Telegram launch cooldown active. Retrying in {tg_cooldown.value}s...")
+            await asyncio.sleep(tg_cooldown.value)
             
-    while True:
+    while True: 
         await asyncio.sleep(3600)
 
 if __name__ == "__main__":
