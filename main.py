@@ -16,6 +16,7 @@ BOT_USERNAME = "Ban_X_All_bot"
 OWNER_ID = 8237368993  
 LOG_GROUP = -1003947649552  
 START_IMG = "https://files.catbox.moe/srmw3t.mp4"
+HOW_TO_USE_URL = "https://files.catbox.moe/ulxbx7.mp4"
 
 # --- FORCE JOIN CONFIGURATION ---
 FSUB_CHANNELS = ["Ban_All_Update", "Genu_Bot_Support"]
@@ -43,6 +44,9 @@ START_BUTTONS = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("👤 ᴏᴡɴᴇʀ", url="https://t.me/CoderNova"),
         InlineKeyboardButton("🎧 sᴜᴘᴘᴏʀᴛ", url="https://t.me/Genu_Bot_Support/119")
+    ],
+    [
+        InlineKeyboardButton("🎬 ʜᴏᴡ ᴛᴏ ᴜsᴇ", url=HOW_TO_USE_URL)
     ],
     [
         InlineKeyboardButton("🛠 ʜᴇʟᴘ & ᴄᴍᴅs", callback_data="help_data"),
@@ -87,7 +91,7 @@ def get_fsub_caption():
 def get_help_caption():
     return (
         f"╔═════════════════════════╗\n"
-        f"    🛠 **ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅs ᴄᴇɴᴛᴇʀ** \n"
+        f"    🛠 **ʜᴇʟᴘ & ᴄᴍᴅs ᴄᴇɴᴛᴇʀ** \n"
         f"╚═════════════════════════╝\n\n"
         f"⚙️ **Group Management Unit:**\n"
         f"🔹 `/banall` — Sweeps all non-admin members immediately via parallel threads.\n\n"
@@ -165,7 +169,6 @@ async def standard_broadcast(client, message):
     
     progress = await message.reply_text("⚡ `Fetching network data routing...`")
     
-    # Non-blocking async fetch from MongoDB mapping
     loop = asyncio.get_event_loop()
     user_ids = await loop.run_in_executor(None, lambda: [u["user_id"] for u in users_col.find()])
     group_ids = await loop.run_in_executor(None, lambda: [g["chat_id"] for g in groups_col.find()])
@@ -181,7 +184,7 @@ async def standard_broadcast(client, message):
         try:
             await message.reply_to_message.copy(target)
             success += 1
-            await asyncio.sleep(0.3) # Avoid triggering structural TG spam blocks
+            await asyncio.sleep(0.3)
         except FloodWait as e:
             await asyncio.sleep(e.value + 1)
             try:
