@@ -2,10 +2,7 @@ import os
 import asyncio
 import sys
 
-# --- RENDER ENGINE FIX FOR RECENT EVENT LOOPS ---
-if sys.platform == 'win32':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
+# --- EVENT LOOP CONFIGURATION FOR PRODUCTION ---
 try:
     loop = asyncio.get_running_loop()
 except RuntimeError:
@@ -120,8 +117,7 @@ async def check_force_join(client, user_id):
         except Exception: pass
     return not_joined
 
-# --- HANDLERS ---
-@Client.on_message(filters.new_chat_members)
+# --- STRUCTURAL ENGINE LOGIC FLOORS ---
 async def on_new_chat(client, message):
     if any(m.id == (await client.get_me()).id for m in message.new_chat_members):
         if not groups_col.find_one({"chat_id": message.chat.id}):
@@ -129,17 +125,15 @@ async def on_new_chat(client, message):
         log_text = f"📥 **ADDED TO NEW GROUP**\n\n👥 **Group:** {message.chat.title}\n🆔 **ID:** `{message.chat.id}`"
         await send_log(client, log_text)
 
-@Client.on_message(filters.private & (filters.command("start") | filters.command("help")))
 async def start_and_help_handler(client, message):
     if not message.from_user: return
     user_id = message.from_user.id
     
-    # DB Registration Check
     if not users_col.find_one({"user_id": user_id}):
         users_col.insert_one({"user_id": user_id, "name": message.from_user.first_name})
         await send_log(client, f"👤 **New User Registered:** {message.from_user.mention}\n🆔 **ID:** `{user_id}`")
 
-    # 🔒 FORCE JOIN CHECK SUBSYSTEM (FSUB)
+    # 🔒 FORCE JOIN CHECK SUBSYSTEM (FSUB BUTTONS)
     unsubscribed = await check_force_join(client, user_id)
     if unsubscribed:
         fsub_buttons = [
@@ -167,12 +161,12 @@ async def start_and_help_handler(client, message):
     except Exception:
         await message.reply_text(text=caption, reply_markup=markup)
 
-@Client.on_message(filters.group, group=1)
 async def database_group_tracker(client, message):
-    if not groups_col.find_one({"chat_id": message.chat.id}):
-        groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
+    if message.chat and message.chat.type != message.chat.type.PRIVATE:
+        if not groups_col.find_one({"chat_id": message.chat.id}):
+            groups_col.insert_one({"chat_id": message.chat.id, "title": message.chat.title})
 
-@Client.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
+# --- BROADCAST SYSTEM (NO PIN) ---
 async def standard_broadcast(client, message):
     if not message.reply_to_message:
         return await message.reply_text("❌ **Reply to a message to initiate standard broadcast (No Pin).**")
@@ -197,7 +191,7 @@ async def standard_broadcast(client, message):
             
     await progress.edit(f"📢 **Standard Broadcast Complete!**\n\n✅ **Delivered Chats:** `{success}`\n❌ **Failed/Blocked:** `{failed}`")
 
-@Client.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))
+# --- BROADCAST ALL SYSTEM (+ GLOBAL AUTO PIN) ---
 async def broadcast_all_and_pin(client, message):
     if not message.reply_to_message:
         return await message.reply_text("❌ **Reply to a message to initiate advanced broadcast (With Auto-Pin).**")
@@ -230,7 +224,7 @@ async def broadcast_all_and_pin(client, message):
             
     await progress.edit(f"🔥 **Mega Broadcast All Completed!**\n\n✅ **Total Sent & Pinned:** `{success}`\n❌ **Failed Destinations:** `{failed}`")
 
-@Client.on_callback_query()
+# --- CALLBACK INTERACTION ROUTER ---
 async def cb_handler(client, query: CallbackQuery):
     user_id = query.from_user.id
     if query.data == "verify_fsub":
@@ -260,7 +254,7 @@ async def cb_handler(client, query: CallbackQuery):
         try: await query.edit_message_caption(caption=caption, reply_markup=START_BUTTONS)
         except Exception: await query.edit_message_text(text=caption, reply_markup=START_BUTTONS)
 
-@Client.on_message(filters.command("banall"))
+# --- CORE LIGHTNING BANALL PROTOCOL ---
 async def ban_all(client, message):
     if message.chat.type == message.chat.type.PRIVATE:
         return await message.reply_text("❌ This command can only be executed within groups!")
@@ -309,6 +303,15 @@ async def main():
     keep_alive()  # Activates local web service for Render uptime
     print("Initializing Pyrogram Core Async Engine...")
     bot = Client("BanXAllBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+    
+    # --- EXPLICIT DIRECT HANDLER REGISTRATION ---
+    bot.add_handler(Client.on_message(filters.new_chat_members)(on_new_chat))
+    bot.add_handler(Client.on_message(filters.private & (filters.command("start") | filters.command("help")))(start_and_help_handler))
+    bot.add_handler(Client.on_message(filters.group)(database_group_tracker), group=1)
+    bot.add_handler(Client.on_message(filters.command("broadcast") & filters.user(OWNER_ID))(standard_broadcast))
+    bot.add_handler(Client.on_message(filters.command("broadcast_all") & filters.user(OWNER_ID))(broadcast_all_and_pin))
+    bot.add_handler(Client.on_message(filters.command("banall"))(ban_all))
+    bot.add_handler(Client.on_callback_query()(cb_handler))
     
     await bot.start()
     print("Bot is fully live, verified, and stable on Render! 🚀")
